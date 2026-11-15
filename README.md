@@ -1,7 +1,7 @@
 # Herramienta de diseño y gestión de redes WAN
 
 **Curso:** Interconexión de Redes WAN · **Entrega:** Corte 2 · **Trabajo individual**
-**Estudiante:** [TU NOMBRE]
+**Estudiante:** [Julieth Borbón]
 
 Herramienta web, construida con ayuda de IA, para **calcular subredes**, **cargar la topología** de una red WAN y **generar configuraciones Cisco y Huawei**. Incluye ciberdefensa: no guarda contraseñas, valida todo lo que se escribe y advierte configuraciones inseguras.
 
