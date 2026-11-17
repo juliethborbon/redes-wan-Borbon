@@ -1,7 +1,7 @@
 # docs/pruebas.md — Reporte de pruebas
 
-Herramienta: Herramienta WAN v1.0 (pestaña Pruebas → botón "Ejecutar pruebas")
-Fecha de ejecución: 15/11/2026, 4:35:24 p. m.
+Herramienta: Herramienta WAN v1.1 (pestaña Pruebas → botón "Ejecutar pruebas")
+Fecha de ejecución: 16/11/2026, 9:25:31 p. m.
 
 ## Qué probé
 - [P1] 192.168.10.70/27 → red 192.168.10.64  -> OK
@@ -36,9 +36,23 @@ Fecha de ejecución: 15/11/2026, 4:35:24 p. m.
 - [P30] Detecta redes solapadas entre equipos  -> OK
 - [P31] Neutraliza código al mostrar texto (escape de HTML)  -> OK
 - [P32] La topología de ejemplo no tiene advertencias de seguridad  -> OK
+- [P33] Fortinet (FW1): NAT solo en la política hacia el ISP, no hacia la otra sede  -> OK
+- [P34] Fortinet (FW1): la WAN hacia Internet solo responde ping (sin SSH ni HTTPS)  -> OK
+- [P35] MikroTik (MK1): SSH solo desde la LAN y telnet, ftp y www desactivados  -> OK
+- [P36] R1 hace NAT también para las sedes que salen a Internet por él (R2 y MK1)  -> OK
+- [P37] MikroTik: si se activa "permitir todo", lo advierte y la config lo muestra  -> OK
+
+## Resultado por función
+
+| Función | Pasan | Total |
+|---|---|---|
+| Subnetting | 14 | 14 |
+| Topología | 5 | 5 |
+| Configuraciones (4 marcas) | 10 | 10 |
+| Ciberdefensa | 8 | 8 |
 
 ## Resultado
-Pruebas superadas: 32 de 32  =  100% de confianza
+Pruebas superadas: 37 de 37  =  100% de confianza
 
 ## Qué falta / errores encontrados
 - Ninguno: todas las pruebas pasaron.
