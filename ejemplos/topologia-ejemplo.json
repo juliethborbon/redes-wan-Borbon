@@ -1,0 +1,145 @@
+{
+  "dispositivos": [
+    {
+      "hostname": "R1",
+      "rol": "router",
+      "marca": "cisco",
+      "sede": "Bogota",
+      "lanIf": "GigabitEthernet0/0",
+      "lan": [
+        {
+          "vlan": 10,
+          "nombre": "VENTAS",
+          "red": "192.168.10.0/26"
+        },
+        {
+          "vlan": 20,
+          "nombre": "SOPORTE",
+          "red": "192.168.10.64/27"
+        }
+      ],
+      "wan": [
+        {
+          "iface": "GigabitEthernet0/1",
+          "ip": "10.0.0.1/30",
+          "hacia": "R2"
+        },
+        {
+          "iface": "GigabitEthernet0/2",
+          "ip": "203.0.113.2/30",
+          "hacia": "ISP"
+        },
+        {
+          "iface": "GigabitEthernet0/3",
+          "ip": "10.0.0.10/30",
+          "hacia": "MK1"
+        }
+      ],
+      "gw": "203.0.113.1",
+      "seguridad": {
+        "telnet": false,
+        "http": false,
+        "gestionWan": false,
+        "anyAny": false,
+        "credDefecto": false
+      }
+    },
+    {
+      "hostname": "R2",
+      "rol": "router",
+      "marca": "huawei",
+      "sede": "Medellin",
+      "lanIf": "GigabitEthernet0/0/0",
+      "lan": [
+        {
+          "vlan": 30,
+          "nombre": "ADMIN",
+          "red": "192.168.20.0/26"
+        }
+      ],
+      "wan": [
+        {
+          "iface": "GigabitEthernet0/0/1",
+          "ip": "10.0.0.2/30",
+          "hacia": "R1"
+        },
+        {
+          "iface": "GigabitEthernet0/0/2",
+          "ip": "10.0.0.5/30",
+          "hacia": "FW1"
+        }
+      ],
+      "gw": "10.0.0.1",
+      "seguridad": {
+        "telnet": false,
+        "http": false,
+        "gestionWan": false,
+        "anyAny": false,
+        "credDefecto": false
+      }
+    },
+    {
+      "hostname": "FW1",
+      "rol": "firewall",
+      "marca": "fortinet",
+      "sede": "Cali",
+      "lanIf": "port1",
+      "lan": [
+        {
+          "vlan": 40,
+          "nombre": "CONTABILIDAD",
+          "red": "192.168.30.0/27"
+        }
+      ],
+      "wan": [
+        {
+          "iface": "port2",
+          "ip": "10.0.0.6/30",
+          "hacia": "R2"
+        },
+        {
+          "iface": "port3",
+          "ip": "198.51.100.2/30",
+          "hacia": "ISP"
+        }
+      ],
+      "gw": "198.51.100.1",
+      "seguridad": {
+        "telnet": false,
+        "http": false,
+        "gestionWan": false,
+        "anyAny": false,
+        "credDefecto": false
+      }
+    },
+    {
+      "hostname": "MK1",
+      "rol": "router",
+      "marca": "mikrotik",
+      "sede": "Barranquilla",
+      "lanIf": "ether1",
+      "lan": [
+        {
+          "vlan": 50,
+          "nombre": "BODEGA",
+          "red": "192.168.40.0/28"
+        }
+      ],
+      "wan": [
+        {
+          "iface": "ether2",
+          "ip": "10.0.0.9/30",
+          "hacia": "R1"
+        }
+      ],
+      "gw": "10.0.0.10",
+      "seguridad": {
+        "telnet": false,
+        "http": false,
+        "gestionWan": false,
+        "anyAny": false,
+        "credDefecto": false
+      }
+    }
+  ]
+}
