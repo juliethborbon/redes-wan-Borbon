@@ -1,0 +1,58 @@
+# ==========================================================
+# Configuración generada por Herramienta WAN v1.0
+# Equipo: R2 | Rol: Router | Sede: Medellin | Marca: Huawei (VRP)
+# REVISA antes de aplicar. Solo en el laboratorio autorizado.
+# Reemplaza <CAMBIAR_CLAVE> directamente en el equipo, nunca en el repositorio.
+# ==========================================================
+system-view
+sysname R2
+#
+aaa
+ local-user adminlab password irreversible-cipher <CAMBIAR_CLAVE>
+ local-user adminlab privilege level 15
+ local-user adminlab service-type ssh
+ quit
+#
+acl number 2001
+ description GESTION
+ rule 5 permit source 192.168.20.0 0.0.0.63
+ rule 100 deny
+ quit
+#
+interface GigabitEthernet0/0/0.30
+ description VLAN 30 ADMIN
+ dot1q termination vid 30
+ ip address 192.168.20.1 255.255.255.192
+ arp broadcast enable
+ quit
+#
+interface GigabitEthernet0/0/1
+ description WAN hacia R1
+ ip address 10.0.0.2 255.255.255.252
+ quit
+#
+interface GigabitEthernet0/0/2
+ description WAN hacia FW1
+ ip address 10.0.0.5 255.255.255.252
+ quit
+#
+ip route-static 192.168.10.0 255.255.255.192 10.0.0.1 description LAN-VENTAS-de-R1
+ip route-static 192.168.10.64 255.255.255.224 10.0.0.1 description LAN-SOPORTE-de-R1
+ip route-static 192.168.30.0 255.255.255.224 10.0.0.6 description LAN-CONTABILIDAD-de-FW1
+ip route-static 0.0.0.0 0.0.0.0 10.0.0.1 description Ruta-por-defecto
+#
+stelnet server enable
+ssh user adminlab authentication-type password
+ssh user adminlab service-type stelnet
+undo telnet server enable
+undo http server enable
+#
+user-interface vty 0 4
+ authentication-mode aaa
+ protocol inbound ssh
+ acl 2001 inbound
+ idle-timeout 10 0
+ quit
+#
+return
+save
