@@ -1,5 +1,5 @@
 # ==========================================================
-# Configuración generada por Herramienta WAN v1.0
+# Configuración generada por Herramienta WAN v1.1
 # Equipo: R2 | Rol: Router | Sede: Medellin | Marca: Huawei (VRP)
 # REVISA antes de aplicar. Solo en el laboratorio autorizado.
 # Reemplaza <CAMBIAR_CLAVE> directamente en el equipo, nunca en el repositorio.

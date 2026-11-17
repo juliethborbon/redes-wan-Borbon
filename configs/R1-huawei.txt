@@ -1,5 +1,5 @@
 # ==========================================================
-# Configuración generada por Herramienta WAN v1.0
+# Configuración generada por Herramienta WAN v1.1
 # Equipo: R1 | Rol: Router | Sede: Bogota | Marca: Huawei (VRP)
 # REVISA antes de aplicar. Solo en el laboratorio autorizado.
 # Reemplaza <CAMBIAR_CLAVE> directamente en el equipo, nunca en el repositorio.
@@ -18,6 +18,8 @@ acl number 2000
  description LAN-NAT
  rule 5 permit source 192.168.10.0 0.0.0.63
  rule 10 permit source 192.168.10.64 0.0.0.31
+ rule 15 permit source 192.168.20.0 0.0.0.63
+ rule 20 permit source 192.168.40.0 0.0.0.15
  quit
 #
 acl number 2001

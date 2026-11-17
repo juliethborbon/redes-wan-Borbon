@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <!--
-  HERRAMIENTA DE DISEÑO Y GESTIÓN DE REDES WAN — v1.0
+  HERRAMIENTA DE DISEÑO Y GESTIÓN DE REDES WAN — v1.1
   Un solo archivo: se abre con doble clic en Chrome o Edge. No necesita internet
   (salvo las fuentes tipográficas, que son opcionales) ni instalar nada.
   Funciones: (1) Subnetting / IP planning  (2) Topología  (3) Configuraciones
@@ -181,7 +181,7 @@ ol.plain li,ul.plain li{margin:5px 0}
 <body>
 <header class="topbar">
   <div class="wrap topbar-in">
-    <div class="brand"><span class="mark" aria-hidden="true"></span> Herramienta WAN <small id="verTxt">v1.0</small></div>
+    <div class="brand"><span class="mark" aria-hidden="true"></span> Herramienta WAN <small id="verTxt">v1.1</small></div>
     <button class="theme-btn" id="themeBtn" type="button">Cambiar tema</button>
   </div>
   <div class="wrap">
@@ -434,7 +434,7 @@ Sala de servidores, 10</textarea></div>
 var WAN = (function(){
   "use strict";
 
-  var VERSION = "1.0";
+  var VERSION = "1.1";
   var MARCADOR = "<CAMBIAR_CLAVE>"; // nunca se guardan claves reales
 
   var MARCAS = { cisco:"Cisco (IOS)", huawei:"Huawei (VRP)", fortinet:"Fortinet (FortiOS)", mikrotik:"MikroTik (RouterOS)" };
@@ -820,7 +820,11 @@ var WAN = (function(){
       if(!gwIface && wans[0]) gwIface = wans[0].iface;
     }
     var avisos = analizar(topo).filter(function(a){ return a.disp === dev.hostname; });
-    return { lanIf:lanIf, wans:wans, lans:lans, rutas:rutas, ispW:ispW, gwIface:gwIface, s:dev.seguridad, avisos:avisos, nat:!!(ispW && lans.length) };
+    // v1.1: si este equipo sale al ISP, también hace NAT para las LAN de las sedes vecinas
+    var natSedes = ispW ? rutas : [];
+    var inIfs = {}; natSedes.forEach(function(r){ inIfs[r.iface] = 1; });
+    return { lanIf:lanIf, wans:wans, lans:lans, rutas:rutas, ispW:ispW, gwIface:gwIface, s:dev.seguridad, avisos:avisos,
+             nat:!!(ispW && (lans.length || rutas.length)), natSedes:natSedes, natInIfs:inIfs };
   }
 
   function encabezado(L, c, dev, marca, cx){
@@ -868,11 +872,13 @@ var WAN = (function(){
       if(svi) L.push(" no switchport");
       L.push(" ip address "+w.ip+" "+w.mask);
       if(w.isp && cx.nat) L.push(" ip nat outside");
+      else if(cx.nat && cx.natInIfs[w.iface]) L.push(" ip nat inside");
       L.push(" no shutdown", "!");
     });
     if(cx.nat){
       L.push("ip access-list standard LAN-NAT");
       cx.lans.forEach(function(l){ L.push(" permit "+l.netStr+" "+l.wild); });
+      cx.natSedes.forEach(function(r){ L.push(" permit "+r.net+" "+V4.wild(r.p)+"   ! LAN "+r.nombre+" de "+r.peer); });
       L.push("ip nat inside source list LAN-NAT interface "+cx.ispW.iface+" overload", "!");
     }
     cx.rutas.forEach(function(r){ L.push("ip route "+r.net+" "+r.mask+" "+r.via); });
@@ -903,6 +909,7 @@ var WAN = (function(){
     if(cx.nat){
       L.push("acl number 2000", " description LAN-NAT");
       cx.lans.forEach(function(l,i){ L.push(" rule "+(5+i*5)+" permit source "+l.netStr+" "+l.wild); });
+      cx.natSedes.forEach(function(r,i){ L.push(" rule "+(5+(cx.lans.length+i)*5)+" permit source "+r.net+" "+V4.wild(r.p)); });
       L.push(" quit", "#");
     }
     var acl = !s.gestionWan && cx.lans.length;
@@ -960,9 +967,10 @@ var WAN = (function(){
              I2+"set allowaccess "+acceso(false), I2+'set role wan', I+"next");
     });
     L.push("end");
-    if(cx.lans.length && !s.anyAny){
+    if((cx.lans.length || cx.natSedes.length) && !s.anyAny){
       L.push("config firewall address");
       cx.lans.forEach(function(l){ L.push(I+'edit "NET-'+corto(l.nombre,20)+'"', I2+"set subnet "+l.netStr+" "+l.mask, I+"next"); });
+      cx.natSedes.forEach(function(r){ L.push(I+'edit "SEDE-'+corto(r.nombre,19)+'"', I2+"set subnet "+r.net+" "+r.mask, I+"next"); });
       L.push("end");
     }
     if(cx.rutas.length || dev.gw){
@@ -973,7 +981,7 @@ var WAN = (function(){
       L.push("end");
     }
     var salidas = cx.wans; // una política por cada salida (ISP con NAT; otras sedes sin NAT)
-    if(cx.lans.length && salidas.length){
+    if((cx.lans.length || cx.natSedes.length) && salidas.length){
       var n = 1;
       L.push("config firewall policy");
       cx.lans.forEach(function(l){
@@ -984,6 +992,15 @@ var WAN = (function(){
           if(w.isp) L.push(I2+"set nat enable");
           L.push(I+"next");
         });
+      });
+      // v1.1: las sedes vecinas también salen a Internet por este equipo
+      var porIface = {};
+      cx.natSedes.forEach(function(r){ (porIface[r.iface] = porIface[r.iface] || []).push(r); });
+      Object.keys(porIface).forEach(function(ifc){
+        var rs = porIface[ifc];
+        L.push(I+"edit "+(n++), I2+'set name "'+corto("SEDE-"+rs[0].peer+"-a-ISP",35)+'"', I2+'set srcintf "'+ifc+'"', I2+'set dstintf "'+cx.ispW.iface+'"',
+               I2+"set srcaddr "+(s.anyAny ? '"all"' : rs.map(function(r){ return '"SEDE-'+corto(r.nombre,19)+'"'; }).join(" ")), I2+'set dstaddr "all"', I2+"set action accept", I2+'set schedule "always"',
+               I2+"set service "+(s.anyAny ? '"ALL"' : '"HTTP" "HTTPS" "DNS" "PING"'), I2+"set logtraffic all", I2+"set nat enable", I+"next");
       });
       L.push("end");
     }
@@ -1026,6 +1043,7 @@ var WAN = (function(){
              "add chain=forward connection-state=invalid action=drop");
       if(cx.lans.length) L.push("add chain=forward src-address-list=LAN-INTERNA action=accept comment="+q("LAN hacia afuera"));
       if(cx.rutas.length) L.push("add chain=forward src-address-list=SEDES dst-address-list=LAN-INTERNA action=accept comment="+q("Otras sedes hacia la LAN"));
+      if(cx.natSedes.length) L.push("add chain=forward src-address-list=SEDES out-interface="+cx.ispW.iface+" action=accept comment="+q("Otras sedes hacia Internet"));
       L.push("add chain=forward action=drop comment="+q("Bloquear el resto"));
     }
     var off = ["ftp","api","api-ssl"]; if(!s.telnet) off.unshift("telnet"); if(!s.http) off.push("www");
@@ -1089,12 +1107,12 @@ var WAN = (function(){
 
   /* ===================== PRUEBAS AUTOMÁTICAS ===================== */
   function ejecutarPruebas(){
-    var res = [];
+    var res = [], CAT = "";
     function T(id, nombre, fn){
       var ok = false, det = "";
       try { var r = fn(); ok = r === true; if(!ok) det = (typeof r === "string") ? r : "resultado inesperado"; }
       catch(e){ ok = false; det = e && e.message ? e.message : String(e); }
-      res.push({ id:id, nombre:nombre, ok:ok, det:det });
+      res.push({ id:id, nombre:nombre, ok:ok, det:det, cat:CAT });
     }
     function eq(a, b){ if(a !== b) return "se esperaba "+b+" y salió "+a; return true; }
     silencioso = true;
@@ -1104,6 +1122,7 @@ var WAN = (function(){
       function clonar(o){ return JSON.parse(JSON.stringify(o)); }
 
       // --- F1 Subnetting ---
+      CAT = "Subnetting";
       T("P1",  "192.168.10.70/27 → red 192.168.10.64", function(){ return eq(V4.str(calcular("192.168.10.70/27").info.net), "192.168.10.64"); });
       T("P2",  "192.168.10.70/27 → broadcast 192.168.10.95", function(){ return eq(V4.str(calcular("192.168.10.70/27").info.bc), "192.168.10.95"); });
       T("P3",  "192.168.10.70/27 → 30 hosts utilizables", function(){ return eq(calcular("192.168.10.70/27").info.usable, 30); });
@@ -1124,6 +1143,7 @@ var WAN = (function(){
       T("P14", "Plan por piso: avisa cuando las áreas no caben", function(){ try { vlsm("192.168.0.0/26",[{nombre:"A",hosts:100}]); return "no avisó"; } catch(e){ return true; } });
 
       // --- F2 Topología ---
+      CAT = "Topología";
       T("P15", "Carga la topología de ejemplo (4 equipos, sin errores)", function(){ var r=validarTopologia(EJEMPLO); return r.ok && r.topo.dispositivos.length===4 ? true : r.err.join("; "); });
       T("P16", "Rechaza un hostname con código (<script>)", function(){ var x=clonar(EJEMPLO); x.dispositivos[0].hostname="<script>alert(1)<\/script>"; return validarTopologia(x).ok === false; });
       T("P17", "Elimina una contraseña real del archivo y avisa", function(){
@@ -1135,6 +1155,7 @@ var WAN = (function(){
         return validarTopologia(a).ok===false && validarTopologia(b).ok===false; });
 
       // --- F3 Configuraciones ---
+      CAT = "Configuraciones (4 marcas)";
       T("P20", "Cisco (R1): hostname, VLAN 10 e IP con máscara", function(){ var c=generar(dev("R1"),"cisco",topo);
         return c.indexOf("hostname R1")>=0 && c.indexOf("encapsulation dot1Q 10")>=0 && c.indexOf("ip address 192.168.10.1 255.255.255.192")>=0; });
       T("P21", "Cisco (R1): ruta estática hacia la LAN de R2 y ruta por defecto", function(){ var c=generar(dev("R1"),"cisco",topo);
@@ -1149,6 +1170,7 @@ var WAN = (function(){
         return ["cisco","huawei","fortinet","mikrotik"].every(function(m){ return generar(dev("R1"),m,topo).indexOf("192.168.10.1")>=0; }); });
 
       // --- F4 Ciberdefensa ---
+      CAT = "Ciberdefensa";
       T("P26", "Ninguna configuración contiene una clave real (usa <CAMBIAR_CLAVE>)", function(){
         return topo.dispositivos.every(function(d){ return ["cisco","huawei","fortinet","mikrotik"].every(function(m){ var c=generar(d,m,topo); return c.indexOf(MARCADOR)>=0 && c.indexOf("Secreta123")<0; }); }); });
       T("P27", "Por defecto: solo SSH (Cisco sin Telnet, Huawei y MikroTik lo desactivan)", function(){
@@ -1161,9 +1183,34 @@ var WAN = (function(){
         return analizar(t).some(function(x){ return /solapadas/.test(x.msg); }); });
       T("P31", "Neutraliza código al mostrar texto (escape de HTML)", function(){ return eq(esc('<script>alert("x")<\/script>'), "&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;"); });
       T("P32", "La topología de ejemplo no tiene advertencias de seguridad", function(){ var a=analizar(topo); return a.length===0 ? true : a.map(function(x){ return x.msg; }).join("; "); });
+
+      // --- v1.1: pruebas nuevas de Fortinet y MikroTik ---
+      // bloque(): extrae un bloque "edit … next" de FortiOS que contenga un texto
+      function bloque(cfg, contiene){
+        var partes = cfg.split(/\n\s*next\n/); for(var i=0;i<partes.length;i++) if(partes[i].indexOf(contiene)>=0) return partes[i]; return "";
+      }
+      CAT = "Configuraciones (4 marcas)";
+      T("P33", "Fortinet (FW1): NAT solo en la política hacia el ISP, no hacia la otra sede", function(){
+        var c=generar(dev("FW1"),"fortinet",topo), isp=bloque(c,'set dstintf "port3"'), sede=bloque(c,'set dstintf "port2"');
+        if(!isp || !sede) return "no se encontraron las dos políticas";
+        return isp.indexOf("set nat enable")>=0 && sede.indexOf("set nat enable")<0; });
+      T("P34", "Fortinet (FW1): la WAN hacia Internet solo responde ping (sin SSH ni HTTPS)", function(){
+        var b=bloque(generar(dev("FW1"),"fortinet",topo),'edit "port3"'); return /set allowaccess ping\n/.test(b+"\n") ? true : "allowaccess incorrecto"; });
+      T("P35", "MikroTik (MK1): SSH solo desde la LAN y telnet, ftp y www desactivados", function(){
+        var c=generar(dev("MK1"),"mikrotik",topo);
+        return /dst-port=22 src-address-list=LAN-INTERNA/.test(c) && /disable telnet,ftp,api,api-ssl,www/.test(c) && /set ssh address=192\.168\.40\.0\/28/.test(c); });
+      T("P36", "R1 hace NAT también para las sedes que salen a Internet por él (R2 y MK1)", function(){
+        var c=generar(dev("R1"),"cisco",topo), h=generar(dev("R1"),"huawei",topo);
+        return /permit 192\.168\.20\.0 0\.0\.0\.63/.test(c) && /permit 192\.168\.40\.0 0\.0\.0\.15/.test(c) && /GigabitEthernet0\/1\n description WAN hacia R2\n ip address [^\n]+\n ip nat inside/.test(c)
+          && /permit source 192\.168\.20\.0 0\.0\.0\.63/.test(h); });
+      CAT = "Ciberdefensa";
+      T("P37", "MikroTik: si se activa \"permitir todo\", lo advierte y la config lo muestra", function(){
+        var t=clonar(topo); t.dispositivos[3].seguridad.anyAny=true;
+        return analizar(t).some(function(x){ return x.disp==="MK1" && /any-any/.test(x.msg); }) && generar(t.dispositivos[3],"mikrotik",t).indexOf("PERMITIR TODO")>=0; });
     } finally { silencioso = false; }
-    var pasan = res.filter(function(r){ return r.ok; }).length;
-    return { resultados:res, pasan:pasan, total:res.length, pct:Math.round(pasan/res.length*100) };
+    var pasan = res.filter(function(r){ return r.ok; }).length, cats = [], porCat = {};
+    res.forEach(function(r){ if(!porCat[r.cat]){ porCat[r.cat] = { cat:r.cat, pasan:0, total:0 }; cats.push(porCat[r.cat]); } porCat[r.cat].total++; if(r.ok) porCat[r.cat].pasan++; });
+    return { resultados:res, pasan:pasan, total:res.length, pct:Math.round(pasan/res.length*100), categorias:cats };
   }
 
   function pruebasMD(r){
@@ -1171,6 +1218,8 @@ var WAN = (function(){
     t += "Herramienta: Herramienta WAN v"+VERSION+" (pestaña Pruebas → botón \"Ejecutar pruebas\")\n";
     t += "Fecha de ejecución: "+new Date().toLocaleString("es-CO")+"\n\n## Qué probé\n";
     r.resultados.forEach(function(x){ t += "- ["+x.id+"] "+x.nombre+"  -> "+(x.ok?"OK":"FALLA"+(x.det?" ("+x.det+")":""))+"\n"; });
+    t += "\n## Resultado por función\n\n| Función | Pasan | Total |\n|---|---|---|\n";
+    r.categorias.forEach(function(c){ t += "| "+c.cat+" | "+c.pasan+" | "+c.total+" |\n"; });
     t += "\n## Resultado\nPruebas superadas: "+r.pasan+" de "+r.total+"  =  "+r.pct+"% de confianza\n\n## Qué falta / errores encontrados\n";
     var f = r.resultados.filter(function(x){ return !x.ok; });
     t += f.length ? f.map(function(x){ return "- ["+x.id+"] "+x.nombre+" -> pendiente"; }).join("\n")+"\n" : "- Ninguno: todas las pruebas pasaron.\n";
@@ -1640,12 +1689,19 @@ if (typeof module !== "undefined") module.exports = WAN;
     $("prPct").textContent = r.pct+"%"; $("prBar").style.width = r.pct+"%";
     $("prTxt").textContent = "Pruebas superadas: "+r.pasan+" de "+r.total+" = "+r.pct+"% de confianza · "+new Date().toLocaleString("es-CO");
     var cont = $("prTbl"); limpiar(cont);
+    // v1.1: resumen por función (cuántas pasan en cada parte de la herramienta)
+    var resumen = el("div", { cls:"grid g4", style:"margin-top:14px" });
+    r.categorias.forEach(function(c){
+      var st = el("div", { cls:"stat" + (c.pasan < c.total ? " alerta" : "") }, [ el("div", { cls:"k", text:c.cat }), el("div", { cls:"v", text:c.pasan+" / "+c.total }) ]);
+      resumen.appendChild(st);
+    });
+    cont.appendChild(resumen);
     var tb = el("table", { cls:"tbl" }), tbody = el("tbody");
-    tb.appendChild(el("thead", null, [ el("tr", null, ["#","Prueba","Resultado"].map(function(h){ return el("th", { text:h }); })) ]));
+    tb.appendChild(el("thead", null, [ el("tr", null, ["#","Función","Prueba","Resultado"].map(function(h){ return el("th", { text:h }); })) ]));
     r.resultados.forEach(function(x){
       var celda = el("td", null, [ el("span", { cls:"chip "+(x.ok ? "ok" : "bad"), text:x.ok ? "OK" : "FALLA" }) ]);
       if(!x.ok && x.det) celda.appendChild(el("div", { cls:"small muted", text:x.det }));
-      tbody.appendChild(el("tr", null, [ el("td", { cls:"m", text:x.id }), el("td", { text:x.nombre }), celda ]));
+      tbody.appendChild(el("tr", null, [ el("td", { cls:"m", text:x.id }), el("td", { cls:"small", text:x.cat }), el("td", { text:x.nombre }), celda ]));
     });
     tb.appendChild(tbody); cont.appendChild(el("div", { cls:"scroll-x" }, [ tb ]));
     $("prMd").disabled = false;
