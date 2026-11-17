@@ -1,0 +1,72 @@
+! ==========================================================
+! Configuración generada por Herramienta WAN v1.0
+! Equipo: R1 | Rol: Router | Sede: Bogota | Marca: Cisco (IOS)
+! REVISA antes de aplicar. Solo en el laboratorio autorizado.
+! Reemplaza <CAMBIAR_CLAVE> directamente en el equipo, nunca en el repositorio.
+! ==========================================================
+enable
+configure terminal
+hostname R1
+no ip domain-lookup
+ip domain-name lab.local
+service password-encryption
+username adminlab privilege 15 secret <CAMBIAR_CLAVE>
+enable secret <CAMBIAR_CLAVE>
+!
+interface GigabitEthernet0/0
+ description LAN (router-on-a-stick)
+ no ip address
+ no shutdown
+!
+interface GigabitEthernet0/0.10
+ description VLAN 10 VENTAS
+ encapsulation dot1Q 10
+ ip address 192.168.10.1 255.255.255.192
+ ip nat inside
+!
+interface GigabitEthernet0/0.20
+ description VLAN 20 SOPORTE
+ encapsulation dot1Q 20
+ ip address 192.168.10.65 255.255.255.224
+ ip nat inside
+!
+interface GigabitEthernet0/1
+ description WAN hacia R2
+ ip address 10.0.0.1 255.255.255.252
+ no shutdown
+!
+interface GigabitEthernet0/2
+ description WAN hacia ISP
+ ip address 203.0.113.2 255.255.255.252
+ ip nat outside
+ no shutdown
+!
+interface GigabitEthernet0/3
+ description WAN hacia MK1
+ ip address 10.0.0.10 255.255.255.252
+ no shutdown
+!
+ip access-list standard LAN-NAT
+ permit 192.168.10.0 0.0.0.63
+ permit 192.168.10.64 0.0.0.31
+ip nat inside source list LAN-NAT interface GigabitEthernet0/2 overload
+!
+ip route 192.168.20.0 255.255.255.192 10.0.0.2
+ip route 192.168.40.0 255.255.255.240 10.0.0.9
+ip route 0.0.0.0 0.0.0.0 203.0.113.1
+!
+no ip http server
+crypto key generate rsa modulus 2048
+ip ssh version 2
+ip access-list standard GESTION
+ permit 192.168.10.0 0.0.0.63
+ permit 192.168.10.64 0.0.0.31
+ deny any log
+line vty 0 4
+ login local
+ transport input ssh
+ access-class GESTION in
+ exec-timeout 10 0
+!
+end
+write memory

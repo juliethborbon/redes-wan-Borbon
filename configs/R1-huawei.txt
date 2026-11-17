@@ -1,0 +1,78 @@
+# ==========================================================
+# Configuración generada por Herramienta WAN v1.0
+# Equipo: R1 | Rol: Router | Sede: Bogota | Marca: Huawei (VRP)
+# REVISA antes de aplicar. Solo en el laboratorio autorizado.
+# Reemplaza <CAMBIAR_CLAVE> directamente en el equipo, nunca en el repositorio.
+# Vista en otra marca: se usan los nombres de interfaz por defecto de Huawei (VRP).
+# ==========================================================
+system-view
+sysname R1
+#
+aaa
+ local-user adminlab password irreversible-cipher <CAMBIAR_CLAVE>
+ local-user adminlab privilege level 15
+ local-user adminlab service-type ssh
+ quit
+#
+acl number 2000
+ description LAN-NAT
+ rule 5 permit source 192.168.10.0 0.0.0.63
+ rule 10 permit source 192.168.10.64 0.0.0.31
+ quit
+#
+acl number 2001
+ description GESTION
+ rule 5 permit source 192.168.10.0 0.0.0.63
+ rule 10 permit source 192.168.10.64 0.0.0.31
+ rule 100 deny
+ quit
+#
+interface GigabitEthernet0/0/0.10
+ description VLAN 10 VENTAS
+ dot1q termination vid 10
+ ip address 192.168.10.1 255.255.255.192
+ arp broadcast enable
+ quit
+#
+interface GigabitEthernet0/0/0.20
+ description VLAN 20 SOPORTE
+ dot1q termination vid 20
+ ip address 192.168.10.65 255.255.255.224
+ arp broadcast enable
+ quit
+#
+interface GigabitEthernet0/0/1
+ description WAN hacia R2
+ ip address 10.0.0.1 255.255.255.252
+ quit
+#
+interface GigabitEthernet0/0/2
+ description WAN hacia ISP
+ ip address 203.0.113.2 255.255.255.252
+ nat outbound 2000
+ quit
+#
+interface GigabitEthernet0/0/3
+ description WAN hacia MK1
+ ip address 10.0.0.10 255.255.255.252
+ quit
+#
+ip route-static 192.168.20.0 255.255.255.192 10.0.0.2 description LAN-ADMIN-de-R2
+ip route-static 192.168.40.0 255.255.255.240 10.0.0.9 description LAN-BODEGA-de-MK1
+ip route-static 0.0.0.0 0.0.0.0 203.0.113.1 description Ruta-por-defecto
+#
+stelnet server enable
+ssh user adminlab authentication-type password
+ssh user adminlab service-type stelnet
+undo telnet server enable
+undo http server enable
+#
+user-interface vty 0 4
+ authentication-mode aaa
+ protocol inbound ssh
+ acl 2001 inbound
+ idle-timeout 10 0
+ quit
+#
+return
+save
