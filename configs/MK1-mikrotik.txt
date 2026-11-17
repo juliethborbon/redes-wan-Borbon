@@ -1,0 +1,37 @@
+# ==========================================================
+# Configuración generada por Herramienta WAN v1.1
+# Equipo: MK1 | Rol: Router | Sede: Barranquilla | Marca: MikroTik (RouterOS)
+# REVISA antes de aplicar. Solo en el laboratorio autorizado.
+# Reemplaza <CAMBIAR_CLAVE> directamente en el equipo, nunca en el repositorio.
+# ==========================================================
+/system identity set name=MK1
+/interface vlan
+add name=vlan50 vlan-id=50 interface=ether1 comment="BODEGA"
+/ip address
+add address=192.168.40.1/28 interface=vlan50 comment="Gateway BODEGA"
+add address=10.0.0.9/30 interface=ether2 comment="WAN hacia R1"
+/ip route
+add dst-address=192.168.10.0/26 gateway=10.0.0.10 comment="LAN VENTAS de R1"
+add dst-address=192.168.10.64/27 gateway=10.0.0.10 comment="LAN SOPORTE de R1"
+add dst-address=0.0.0.0/0 gateway=10.0.0.10 comment="Ruta por defecto"
+/ip firewall address-list
+add list=LAN-INTERNA address=192.168.40.0/28
+add list=SEDES address=192.168.10.0/26
+add list=SEDES address=192.168.10.64/27
+/ip firewall filter
+add chain=input connection-state=established,related action=accept comment="Respuestas"
+add chain=input connection-state=invalid action=drop
+add chain=input protocol=icmp action=accept comment="Ping"
+add chain=input protocol=tcp dst-port=22 src-address-list=LAN-INTERNA action=accept comment="SSH solo desde la LAN"
+add chain=input action=drop comment="Bloquear el resto hacia el router"
+add chain=forward connection-state=established,related action=accept
+add chain=forward connection-state=invalid action=drop
+add chain=forward src-address-list=LAN-INTERNA action=accept comment="LAN hacia afuera"
+add chain=forward src-address-list=SEDES dst-address-list=LAN-INTERNA action=accept comment="Otras sedes hacia la LAN"
+add chain=forward action=drop comment="Bloquear el resto"
+/ip service
+disable telnet,ftp,api,api-ssl,www
+set ssh address=192.168.40.0/28
+/user
+add name=adminlab group=full password="<CAMBIAR_CLAVE>"
+disable admin

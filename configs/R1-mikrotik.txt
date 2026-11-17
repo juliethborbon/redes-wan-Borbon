@@ -1,0 +1,46 @@
+# ==========================================================
+# Configuración generada por Herramienta WAN v1.1
+# Equipo: R1 | Rol: Router | Sede: Bogota | Marca: MikroTik (RouterOS)
+# REVISA antes de aplicar. Solo en el laboratorio autorizado.
+# Reemplaza <CAMBIAR_CLAVE> directamente en el equipo, nunca en el repositorio.
+# Vista en otra marca: se usan los nombres de interfaz por defecto de MikroTik (RouterOS).
+# ==========================================================
+/system identity set name=R1
+/interface vlan
+add name=vlan10 vlan-id=10 interface=ether1 comment="VENTAS"
+add name=vlan20 vlan-id=20 interface=ether1 comment="SOPORTE"
+/ip address
+add address=192.168.10.1/26 interface=vlan10 comment="Gateway VENTAS"
+add address=192.168.10.65/27 interface=vlan20 comment="Gateway SOPORTE"
+add address=10.0.0.1/30 interface=ether2 comment="WAN hacia R2"
+add address=203.0.113.2/30 interface=ether3 comment="WAN hacia ISP"
+add address=10.0.0.10/30 interface=ether4 comment="WAN hacia MK1"
+/ip route
+add dst-address=192.168.20.0/26 gateway=10.0.0.2 comment="LAN ADMIN de R2"
+add dst-address=192.168.40.0/28 gateway=10.0.0.9 comment="LAN BODEGA de MK1"
+add dst-address=0.0.0.0/0 gateway=203.0.113.1 comment="Ruta por defecto"
+/ip firewall address-list
+add list=LAN-INTERNA address=192.168.10.0/26
+add list=LAN-INTERNA address=192.168.10.64/27
+add list=SEDES address=192.168.20.0/26
+add list=SEDES address=192.168.40.0/28
+/ip firewall nat
+add chain=srcnat out-interface=ether3 action=masquerade comment="NAT hacia el ISP"
+/ip firewall filter
+add chain=input connection-state=established,related action=accept comment="Respuestas"
+add chain=input connection-state=invalid action=drop
+add chain=input protocol=icmp action=accept comment="Ping"
+add chain=input protocol=tcp dst-port=22 src-address-list=LAN-INTERNA action=accept comment="SSH solo desde la LAN"
+add chain=input action=drop comment="Bloquear el resto hacia el router"
+add chain=forward connection-state=established,related action=accept
+add chain=forward connection-state=invalid action=drop
+add chain=forward src-address-list=LAN-INTERNA action=accept comment="LAN hacia afuera"
+add chain=forward src-address-list=SEDES dst-address-list=LAN-INTERNA action=accept comment="Otras sedes hacia la LAN"
+add chain=forward src-address-list=SEDES out-interface=ether3 action=accept comment="Otras sedes hacia Internet"
+add chain=forward action=drop comment="Bloquear el resto"
+/ip service
+disable telnet,ftp,api,api-ssl,www
+set ssh address=192.168.10.0/26,192.168.10.64/27
+/user
+add name=adminlab group=full password="<CAMBIAR_CLAVE>"
+disable admin
