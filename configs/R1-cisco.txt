@@ -1,5 +1,5 @@
 ! ==========================================================
-! Configuración generada por Herramienta WAN v1.0
+! Configuración generada por Herramienta WAN v1.1
 ! Equipo: R1 | Rol: Router | Sede: Bogota | Marca: Cisco (IOS)
 ! REVISA antes de aplicar. Solo en el laboratorio autorizado.
 ! Reemplaza <CAMBIAR_CLAVE> directamente en el equipo, nunca en el repositorio.
@@ -33,6 +33,7 @@ interface GigabitEthernet0/0.20
 interface GigabitEthernet0/1
  description WAN hacia R2
  ip address 10.0.0.1 255.255.255.252
+ ip nat inside
  no shutdown
 !
 interface GigabitEthernet0/2
@@ -44,11 +45,14 @@ interface GigabitEthernet0/2
 interface GigabitEthernet0/3
  description WAN hacia MK1
  ip address 10.0.0.10 255.255.255.252
+ ip nat inside
  no shutdown
 !
 ip access-list standard LAN-NAT
  permit 192.168.10.0 0.0.0.63
  permit 192.168.10.64 0.0.0.31
+ permit 192.168.20.0 0.0.0.63   ! LAN ADMIN de R2
+ permit 192.168.40.0 0.0.0.15   ! LAN BODEGA de MK1
 ip nat inside source list LAN-NAT interface GigabitEthernet0/2 overload
 !
 ip route 192.168.20.0 255.255.255.192 10.0.0.2
