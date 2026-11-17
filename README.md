@@ -1,80 +1,68 @@
-# Herramienta de diseño y gestión de redes WAN
+# Herramienta de Redes WAN — Julieth Borbón  
 
-**Curso:** Interconexión de Redes WAN · **Entrega:** Corte 2 ·
-**Estudiante:** Julieth Borbón
+**Materia:** Interconexión de Redes WAN
+**Repositorio (público):** https://github.com/juliethborbon/redes-wan-Borbon
 
-Herramienta web, construida con ayuda de IA, para **calcular subredes**, **cargar la topología** de una red WAN y **generar configuraciones Cisco y Huawei**. Incluye ciberdefensa: no guarda contraseñas, valida todo lo que se escribe y advierte configuraciones inseguras.
+## Qué hace esta herramienta
+Herramienta web, construida con ayuda de IA, que calcula subredes, carga la topología de una red WAN de varias sedes y genera la configuración de los equipos para **Cisco, Huawei, Fortinet y MikroTik**. Integra ciberdefensa: no guarda contraseñas, valida todo lo que se escribe y advierte configuraciones inseguras.
 
-> Todos los datos son de ejemplo (redes privadas y rangos de documentación). Las configuraciones se aplican solo en el laboratorio autorizado del curso.
+![Herramienta final](docs/capturas/10-app-final.png)
 
----
+## Funciones
+- Subnetting / IP Planning (IPv4/IPv6, público/privado, división de redes y plan por piso con VLSM)
+- Carga de la topología (dispositivos, VLAN, enlaces WAN, ISP; formulario o JSON)
+- Generación de configuraciones: Cisco, Huawei, Fortinet, MikroTik
+- Ciberdefensa contra IA (aplica [docs/politicas-ia.md](docs/politicas-ia.md))
+- Pruebas automáticas con % de confianza
 
-## Cómo abrirla
-
+## Cómo ejecutarla
 1. Descarga `herramienta-wan.html` (botón **Download raw file**).
-2. Dale doble clic: se abre en Chrome o Edge. No hay que instalar nada.
+2. Ábrelo con doble clic en Chrome o Edge. No hay que instalar nada.
 3. En **Inicio**, pulsa **Cargar topología de ejemplo**.
+4. Para comprobarla: pestaña **Pruebas** → **Ejecutar pruebas**.
 
-## Funciones del Corte 2
+Guía completa: [docs/manual.md](docs/manual.md)
 
-### 1. Subnetting / IP planning
-Calcula red, broadcast, máscara, rango utilizable y hosts (IPv4 e IPv6), divide redes y arma el plan por piso con VLSM. Rechaza IPs inválidas como `999.1.1.1`.
+## Pruebas y % de confianza  (Corte 3)
+- Pruebas superadas: **37 de 37 = 100 %** (ver [docs/pruebas.md](docs/pruebas.md))
 
-| Prueba | Resultado |
+| Función | Pruebas |
 |---|---|
-| 192.168.10.70/27 | Red 192.168.10.64 · Broadcast 192.168.10.95 · 30 hosts |
+| Subnetting | 14 / 14 |
+| Topología | 5 / 5 |
+| Configuraciones (4 marcas) | 10 / 10 |
+| Ciberdefensa | 8 / 8 |
 
-Detalle: [`ejemplos/plan-subnetting.md`](ejemplos/plan-subnetting.md)
+## Documentos
+- [docs/informe-corte2.pdf](docs/informe-corte2.pdf) · [docs/informe-corte3.pdf](docs/informe-corte3.pdf)
+- [docs/manual.md](docs/manual.md) · [docs/seguridad.md](docs/seguridad.md) · [docs/politicas-ia.md](docs/politicas-ia.md) · [docs/pruebas.md](docs/pruebas.md)
+- Configuraciones de ejemplo: [configs/](configs/) · Topología y subnetting de ejemplo: [ejemplos/](ejemplos/)
 
-![Subnetting](docs/capturas/01-subnetting.png)
+## Capturas (evidencias)
+`docs/capturas/` (01-subnetting.png … 10-app-final.png)
 
-### 2. Carga de la topología
-Formulario o archivo JSON con equipos, marca, VLAN y enlaces WAN. La herramienta dibuja la red y rechaza datos mal formados o con código.
+| Corte 2 | Corte 3 |
+|---|---|
+| [01-subnetting](docs/capturas/01-subnetting.png) | [06-config-fortinet](docs/capturas/06-config-fortinet.png) |
+| [02-topologia](docs/capturas/02-topologia.png) | [07-config-mikrotik](docs/capturas/07-config-mikrotik.png) |
+| [03-config-cisco](docs/capturas/03-config-cisco.png) | [08-ciberdefensa](docs/capturas/08-ciberdefensa.png) |
+| [04-config-huawei](docs/capturas/04-config-huawei.png) | [09-pruebas](docs/capturas/09-pruebas.png) |
+| [05-github-commits](docs/capturas/05-github-commits.png) | [10-app-final](docs/capturas/10-app-final.png) |
 
-Archivo de ejemplo: [`ejemplos/topologia-ejemplo.json`](ejemplos/topologia-ejemplo.json) · Detalle: [`ejemplos/topologia.md`](ejemplos/topologia.md)
-
-![Topología](docs/capturas/02-topologia.png)
-
-### 3. Configuraciones Cisco + Huawei
-A partir de la topología y el subnetting genera hostname, VLAN, IPs, rutas estáticas, ruta por defecto y acceso solo por SSH. Las contraseñas aparecen como `<CAMBIAR_CLAVE>`.
-
-Archivos: [`configs/`](configs/)
-
-![Configuración Cisco](docs/capturas/03-config-cisco.png)
-![Configuración Huawei](docs/capturas/04-config-huawei.png)
-
-### 4. Ciberdefensa contra IA
-- Sin contraseñas ni tokens en el repositorio: `.env` está en `.gitignore` y solo se sube `.env.example`.
-- Validación de todo lo que se escribe o importa; lo que parece código se rechaza.
-- Advertencias de configuraciones inseguras (Telnet, claves por defecto, administración desde la WAN).
-- Políticas: [`docs/politicas-ia.md`](docs/politicas-ia.md) · Pruebas: [`docs/pruebas.md`](docs/pruebas.md)
-
-## Estructura del repositorio
-
-```
-README.md
-.gitignore
-.env.example
-herramienta-wan.html
-ejemplos/   plan-subnetting.md · topologia-ejemplo.json · topologia.md
-configs/    R1-cisco.txt · R2-huawei.txt · R1-huawei.txt
-docs/       informe-corte2.pdf · politicas-ia.md · pruebas.md
-docs/capturas/  01-subnetting · 02-topologia · 03-config-cisco · 04-config-huawei · 05-github-commits
-```
-
-## Autoevaluación (rúbrica Corte 2)
-
-| Criterio | Peso | Evidencia |
-|---|---|---|
-| Subnetting funcional | 20 % | Pestaña 1, `ejemplos/plan-subnetting.md`, captura 01 |
-| Carga de topología | 15 % | Pestaña 2, `ejemplos/topologia-ejemplo.json`, captura 02 |
-| Configuraciones Cisco + Huawei | 25 % | `configs/`, capturas 03 y 04 |
-| Ciberdefensa aplicada | 10 % | `.gitignore`, `.env.example`, `docs/politicas-ia.md` |
-| Documento | 10 % | `docs/informe-corte2.pdf` |
-| Repositorio y versiones | 20 % | Rama `feature/herramienta-corte2`, Pull Request, captura 05 |
+## Autoevaluación (marca Sí/No)
+| Criterio                          | ¿Cumplido? | Evidencia            |
+|-----------------------------------|------------|----------------------|
+| Subnetting funciona               | Sí         | 01-subnetting.png    |
+| Carga de topología                | Sí         | 02-topologia.png     |
+| Config Cisco y Huawei             | Sí         | 03 / 04              |
+| Config Fortinet y MikroTik (C3)   | Sí         | 06 / 07              |
+| Ciberdefensa (politicas-ia.md)    | Sí         | 08-ciberdefensa.png  |
+| Pruebas con % de confianza (C3)   | Sí         | docs/pruebas.md      |
 
 ## Historial de versiones
+| Versión | Corte | Qué incluye |
+|---|---|---|
+| v1.0 | 2 | Subnetting, topología, configuraciones Cisco y Huawei, ciberdefensa básica, 32 pruebas |
+| v1.1 | 3 | Fortinet y MikroTik documentados; NAT para las sedes vecinas que salen a Internet por otro router; 5 pruebas nuevas (37); resumen de pruebas por función; manual y seguridad.md |
 
-| Versión | Qué incluye |
-|---|---|
-| v1.0 | Subnetting, topología, configuraciones Cisco/Huawei (y Fortinet/MikroTik para el Corte 3), ciberdefensa y 32 pruebas automáticas |
+> Solo datos de ejemplo (redes privadas y rangos de documentación). Las configuraciones se aplican únicamente en el laboratorio autorizado.
